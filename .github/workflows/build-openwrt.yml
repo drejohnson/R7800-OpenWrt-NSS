@@ -22,7 +22,7 @@ env:
   SSH_ACTIONS: false
   UPLOAD_BRANCH: true
   BRANCH: R7800-Hnyman
-  GITHUB_USER_NAME: ClayMoreBoy
+  GITHUB_USER_NAME: drejohnson
   GITHUB_USER_EMAIL: ${{ secrets.EMAIL }}
   GITHUB: github.com/drejohnson/OpenWrt-Actions-R7800.git
   UPLOAD_BIN_DIR: false
@@ -63,33 +63,50 @@ jobs:
     - name: Initialize build
       run: |
         chmod +x $BUILD_SH
+        mkdir openwrt
         cd openwrt
-        $GITHUB_WORKSPACE/$BUILD_SH
+        ./$BUILD_SH
 
-    - name: Update & Install feeds
-      #working-directory: ./openwrt
+#     - name: Update & Install feeds
+#       working-directory: ./openwrt
+#       run: |
+#         ./scripts/feeds update -a
+#         ./scripts/feeds install -a
+        
+    - name: Load Custom Configuration
       run: |
-        cp feeds.conf.default feeds.conf
-        ./scripts/feeds update -a
-        #rm -rf feeds/packages/net/wifidog*
-        ./scripts/feeds install -a
-    - name: Configuration Customization - Build_x86_64
-      env:
-        CONFIG_URL: 'http://downloads.openwrt.org/snapshots/targets/x86/64/config.buildinfo'
-      #working-directory: ./openwrt
-      run: |
-        [ -e $CONFIG_FILE ] && curl $CONFIG_URL -o .config
+        [ -e files ] && mv files openwrt/files
+        chmod +x $DIY_SH
+        cd openwrt/master
+        ../$DIY_SH
         make defconfig
-    - name: Download package
-      #working-directory: ./openwrt
-      run: |
-        make download -j$(nproc)
-        find dl -size -1024c -exec ls -l {} \;
+        
     - name: Build firmware
-      #working-directory: ./openwrt
+      working-directory: ./openwrt/master
+      id: compile
       run: |
-        echo -e "$(nproc) thread build."
-        make V=s VERBOSE=1 -j$(nproc) JOBS=$(nproc) 2>&1 | tee build.log | egrep -i '(warn|error)'
+        cd openwrt/master
+        ./hnscripts/updateNmake.sh
+        echo "::set-output name=status::success"
+        
+    - name: Upload Branch
+      if: steps.compile.outputs.status == 'success' && env.UPLOAD_BRANCH == 'true' && !cancelled() 
+      env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+      run: |
+          cd openwrt/master/bin/targets/*/*
+          rm -rf *uImage
+          rm -rf *.manifest
+          rm -rf *.seed
+          rm -rf *.buildinfo
+          cd openwrt/master/bin
+          git init
+          git config user.name $GITHUB_USER_NAME
+          git config user.email $GITHUB_USER_EMAIL
+          git add .
+          git commit -m "Update OpenWrt_"$BRANCH
+          git push --force --quiet https://${{ secrets.RELEASE_TOKEN }}@$GITHUB HEAD:OpenWrt-$BRANCH
+        
     - name : Upload artifact
       #working-directory: ./openwrt
       uses: actions/upload-artifact@master
