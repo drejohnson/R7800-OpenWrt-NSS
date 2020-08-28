@@ -74,9 +74,10 @@ jobs:
 #         ./scripts/feeds install -a
         
     - name: Load Custom Configuration
-      working-directory: ./openwrt/master
+      # working-directory: ./openwrt/master
       run: |
         chmod +x $DIY_SH
+        ./openwrt/master
         ../../$DIY_SH
         make defconfig
         
