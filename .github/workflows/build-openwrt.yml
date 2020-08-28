@@ -65,7 +65,7 @@ jobs:
       run: |
         mkdir openwrt
         chmod +x build.sh && cp build.sh ./openwrt && cd openwrt && ./build.sh
-        chmod +x newBuild.sh && ./newBuild.sh
+        chmod +x newBuildroot.sh && ./newBuildroot.sh
 
 #     - name: Update & Install feeds
 #       working-directory: ./openwrt
