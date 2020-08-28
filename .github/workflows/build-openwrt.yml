@@ -81,30 +81,88 @@ jobs:
         ../../$DIY_SH
         make defconfig
         
+    - name: SSH connection to Actions
+      uses: P3TERX/debugger-action@master
+      if: env.SSH_ACTIONS == 'true'
+
     - name: Build firmware
       working-directory: ./openwrt/master
       id: compile
       run: |
         ./hnscripts/updateNmake.sh
         echo "::set-output name=status::success"
+
+    - name: Clean Up
+      id: cleanup
+      if: steps.compile.outputs.status == 'success' && env.UPLOAD_BRANCH == 'true' && !cancelled()
+      run: |
+        cd ./openwrt/bin/targets/*/*
+        rm -rf *uImage
+        rm -rf *.manifest
+        rm -rf *.seed
+        rm -rf *.buildinfo
         
     - name: Upload Branch
       if: steps.compile.outputs.status == 'success' && env.UPLOAD_BRANCH == 'true' && !cancelled() 
       env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
       run: |
-          cd openwrt/master/bin/targets/*/*
-          rm -rf *uImage
-          rm -rf *.manifest
-          rm -rf *.seed
-          rm -rf *.buildinfo
-          cd openwrt/master/bin
+          cd ./openwrt/master/bin/targets/*/*
+          
+          cd ./openwrt/master/bin
           git init
           git config user.name $GITHUB_USER_NAME
           git config user.email $GITHUB_USER_EMAIL
           git add .
           git commit -m "Update OpenWrt_"$BRANCH
           git push --force --quiet https://${{ secrets.RELEASE_TOKEN }}@$GITHUB HEAD:OpenWrt-$BRANCH
+
+    - name: Organize Files
+      id: organize
+      if: steps.compile.outputs.status == 'success' && env.UPLOAD_FIRMWARE == 'true' && !cancelled()
+      run: |
+        mv openwrt/master/.config openwrt/master/bin/targets/*/*
+        cd openwrt/master/bin/targets/*/*
+        rm -rf packages
+        rm -rf *uImage
+        rm -rf *.manifest
+        rm -rf *.seed
+        rm -rf *.buildinfo
+        echo "::set-env name=FIRMWARE::$PWD"
+        echo "::set-output name=status::success"
+
+    - name: Upload Firmware Directory
+      uses: actions/upload-artifact@main
+      if: steps.organize.outputs.status == 'success' && !cancelled()
+      with:
+        name: ${{ env.BUILD_USER }}-${{ env.DATE }}-OpenWrt-${{ env.BRANCH }}-Firmware
+        path: ${{ env.FIRMWARE }}
+
+    - name: Generate Tag
+      id: tag
+      if: steps.compile.outputs.status == 'success' && env.CREATE_RELEASE == 'true' && !cancelled()
+      run: |
+        echo ::set-env name=RELEASE_TAG::"$(TZ=UTC-8 date +"%Y-%m-%d")"
+        echo "::set-output name=status::success"
+    
+    - name: Upload Firmware To Release
+      uses: softprops/action-gh-release@v1
+      if: steps.tag.outputs.status == 'success' && !cancelled()
+      env:
+        GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+      with:
+        name: Netgear ${{ env.BRANCH }} 🚀 | Automatic compilation / ${{ env.RELEASE_TAG }}
+        tag_name: ${{ env.RELEASE_DATE }}
+        body: |            
+            1. This firmware is automatically compiled
+            2. Only complete firmware is provided in the release
+            3. If you need a separate IPK, please download from the branch
+            4. Source Code：${{ env.REPO_URL }}
+            -- Build by ${{ env.BUILD_USER }} @ with Github Action on ${{ env.RELEASE_DATE }}
+            🚀 Auto build           
+            ${{ env.useVersionInfo }}
+            ${{ github.event.commits[0].message }}
+        files: ${{ env.FIRMWARE }}/*
         
     - name : Upload artifact
       #working-directory: ./openwrt
