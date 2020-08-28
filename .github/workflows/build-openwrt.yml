@@ -74,15 +74,16 @@ jobs:
 #         ./scripts/feeds install -a
         
     - name: Load Custom Configuration
+      working-directory: ./openwrt/master
       run: |
-        cd openwrt/master
+        chmod +x ../../$DIY_SH
+        ../../$DIY_SH
         make defconfig
         
     - name: Build firmware
       working-directory: ./openwrt/master
       id: compile
       run: |
-        cd openwrt/master
         ./hnscripts/updateNmake.sh
         echo "::set-output name=status::success"
         
