@@ -76,7 +76,7 @@ jobs:
     - name: Load Custom Configuration
       working-directory: ./openwrt/master
       run: |
-        chmod +x ../../$DIY_SH
+        chmod +x $DIY_SH
         ../../$DIY_SH
         make defconfig
         
