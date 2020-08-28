@@ -63,11 +63,8 @@ jobs:
 
     - name: Initialize build
       run: |
-        chmod +x $BUILD_SH
         mkdir openwrt
-        cd openwrt
-        cp $BUILD_SH ./openwrt
-        ./$BUILD_SH
+        chmod +x build.sh && cp build.sh ./openwrt && cd openwrt && ./build.sh
 
 #     - name: Update & Install feeds
 #       working-directory: ./openwrt
