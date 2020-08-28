@@ -66,6 +66,7 @@ jobs:
         chmod +x $BUILD_SH
         mkdir openwrt
         cd openwrt
+        cp $BUILD_SH ./openwrt
         ./$BUILD_SH
 
 #     - name: Update & Install feeds
