@@ -66,6 +66,11 @@ jobs:
         mkdir openwrt
         chmod +x build.sh && cp build.sh ./openwrt && cd openwrt && ./build.sh
         chmod +x newBuildroot.sh && ./newBuildroot.sh
+        useVersionInfo=$(git show -s --date=short --format="Author: %an<br/>Date: %cd<br/>Commit: %s")
+        cd master
+        echo "::set-env name=useVersionInfo::$useVersionInfo"
+        echo "::set-env name=DATE::$(TZ=UTC-8 date "+%Y%m%d")"
+        echo "::set-env name=RELEASE_DATE::$(TZ=UTC-8 date "+%Y-%m-%d")"
 
 #     - name: Update & Install feeds
 #       working-directory: ./openwrt
@@ -105,7 +110,7 @@ jobs:
     - name: Upload Branch
       if: steps.compile.outputs.status == 'success' && env.UPLOAD_BRANCH == 'true' && !cancelled() 
       env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
       run: |
           cd ./openwrt/master/bin
           git init
@@ -147,7 +152,7 @@ jobs:
       uses: softprops/action-gh-release@v1
       if: steps.tag.outputs.status == 'success' && !cancelled()
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
       with:
         name: Netgear ${{ env.BRANCH }} 🚀 | Automatic compilation / ${{ env.RELEASE_TAG }}
         tag_name: ${{ env.RELEASE_DATE }}
