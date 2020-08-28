@@ -77,7 +77,7 @@ jobs:
       # working-directory: ./openwrt/master
       run: |
         chmod +x $DIY_SH
-        ./openwrt/master
+        cd ./openwrt/master
         ../../$DIY_SH
         make defconfig
         
