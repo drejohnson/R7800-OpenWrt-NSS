@@ -2,7 +2,9 @@
 
 # WIFI名为MAC后六位
 rm -rf package/kernel/mac80211/files/lib/wifi/mac80211.sh
-cp -f ../mac80211.sh package/kernel/mac80211/files/lib/wifi/
+cp -f ../../mac80211.sh package/kernel/mac80211/files/lib/wifi/
+
+cp config.init .config
 
 # IPv6支持:
 cat >> .config <<EOF
