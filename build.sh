@@ -18,3 +18,5 @@ wget $LUCI_PATCH_DL -O $LUCI_PATCH_FILE
 
 MAIN_PATCH_DL=https://www.dropbox.com/sh/ew0gap0crn30wyk/AAAs-is0uoppbgFeFtkixHMOa/${FILEPATH}/${MAIN_PATCH_FILE}?dl=1
 wget $MAIN_PATCH_DL -O $MAIN_PATCH_FILE
+
+mv $BUILD_ROOT_FILE newBuildroot.sh
