@@ -19,7 +19,7 @@ on:
 
 env:
   BUILD_SH: build.sh
-  DIY: OpenWrt-R7800.sh
+  DIY_SH: OpenWrt-R7800.sh
   SSH_ACTIONS: false
   UPLOAD_BRANCH: true
   BRANCH: R7800-Hnyman
