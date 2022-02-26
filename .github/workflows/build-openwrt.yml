@@ -76,6 +76,7 @@ jobs:
         [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
         cp -f default-settings openwrt/package/emortal/default-settings/files/zzz-default-settings
         chmod +x ./customize.sh && ./customize.sh
+        chmod +x ./packages.sh && ./packages.sh
         cd openwrt
         cp -f .config .config && make defconfig
         make package/upx/{clean,compile} V=s
