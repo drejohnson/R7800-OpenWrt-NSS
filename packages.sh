@@ -1,9 +1,10 @@
-git clone --depth 1 https://github.com/kuoruan/openwrt-upx.git package/openwrt-upx
-git clone --depth 1 https://github.com/xiaorouji/openwrt-passwall.git package/openwrt-passwall
-git clone --depth 1 https://github.com/yichya/luci-app-xray package/luci-app-xray
-git clone --depth 1 https://github.com/jerrykuku/luci-theme-argon.git package/luci-theme-argon
+# git clone --depth 1 https://github.com/kuoruan/openwrt-upx.git package/openwrt-upx
+# git clone --depth 1 https://github.com/xiaorouji/openwrt-passwall.git package/openwrt-passwall
+# git clone --depth 1 https://github.com/yichya/luci-app-xray package/luci-app-xray
+# git clone --depth 1 https://github.com/jerrykuku/luci-theme-argon.git package/luci-theme-argon
 
 # Build OpenClash
+cd openwrt
 mkdir package/luci-app-openclash
 cd package/luci-app-openclash
 git init
