@@ -84,6 +84,7 @@ jobs:
         [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
         cp -rf default-settings openwrt/package/default-settings
         chmod +x ./customize.sh && ./customize.sh
+        chmod +x ./packages.sh && ./packages.sh
         cd openwrt
         # git clone --depth 1 https://github.com/xiaorouji/openwrt-passwall.git package/openwrt-passwall
         git clone --depth 1 https://github.com/yichya/luci-app-xray package/luci-app-xray
