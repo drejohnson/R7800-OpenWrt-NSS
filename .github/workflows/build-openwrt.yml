@@ -78,8 +78,7 @@ jobs:
         chmod +x ./customize.sh && ./customize.sh
         cd openwrt
         cp -f .config .config && make defconfig
-        ./scripts/feeds update -a
-        ./scripts/feeds install -a
+        make package/upx/{clean,compile} V=s
     - name: Download package
       id: package
       working-directory: ./openwrt
