@@ -74,10 +74,10 @@ jobs:
         CONFIG_FILE: '.config'
       run: |
         [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
-        cp -f default-settings openwrt/package/emortal/default-settings/files/zzz-default-settings
+        cp -f default-settings openwrt/package/default-settings
         chmod +x ./customize.sh && ./customize.sh
-        chmod +x ./packages.sh && ./packages.sh
         cd openwrt
+        chmod +x ./packages.sh && ./packages.sh
         cp -f .config .config && make defconfig
         make package/upx/{clean,compile} V=s
     - name: Download package
