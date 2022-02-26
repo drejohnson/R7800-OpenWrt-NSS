@@ -1,46 +1,39 @@
-#=================================================
-# Description: Hnyman R7800 OpenWrt build using GitHub Actions
-# Lisence: MIT
-# Author: Dre Johnson dre@phreshr.com
-#=================================================
-
-name: OpenWrt R7800 Build
+name: OpenWrt_v21.02 
 
 on:
-  push:
-#    branches:
-#      - master
-  pull_request:
-    branches:
-      - master
+  repository_dispatch:
+  workflow_dispatch:
+    inputs:
+      ssh:
+        description: 'SSH connection to Actions'
+        required: false
+        default: 'false'
 
-#  schedule:
-#    - cron: 0 8 * * 5
+  schedule:
+    - cron: 0 8 * * 5
 
 env:
-  BUILD_SH: build.sh
-  DIY_SH: OpenWrt-R7800.sh
-  SSH_ACTIONS: false
-  UPLOAD_BRANCH: true
-  BRANCH: R7800-Hnyman
-  GITHUB_USER_NAME: drejohnson
-  GITHUB_USER_EMAIL: ${{ secrets.EMAIL }}
-  GITHUB: github.com/drejohnson/OpenWrt-Actions-R7800.git
   UPLOAD_BIN_DIR: false
   UPLOAD_FIRMWARE: true
-  CREATE_RELEASE: true
-  BUILD_USER: drejohnson
+  UPLOAD_COWTRANSFER: false
+  UPLOAD_WETRANSFER: false
+  UPLOAD_RELEASE: true
   TZ: Asia/Shanghai
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    if: github.event.repository.owner.id == github.event.sender.id
+
+    name: Build ${{matrix.target}}
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [openwrt_21.02]
 
     steps:
     - name: Checkout
-      uses: actions/checkout@master
-      with:
-        fetch-depth: 1
+      uses: actions/checkout@main
 
     - name: Initialization environment
       env:
@@ -48,128 +41,145 @@ jobs:
       run: |
         sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
         sudo -E apt-get -qq update
-        sudo -E apt-get -qq install $(curl -fsSL git.io/depends-ubuntu-2004)
+        sudo -E apt-get -qq install build-essential asciidoc binutils bzip2 gawk gettext git libncurses5-dev libz-dev patch python3 python2.7 unzip zlib1g-dev lib32gcc1 libc6-dev-i386 subversion flex uglifyjs gcc-multilib g++-multilib p7zip p7zip-full msmtp libssl-dev texinfo libglib2.0-dev xmlto qemu-utils upx-ucl libelf-dev autoconf automake libtool autopoint device-tree-compiler ccache xsltproc rename antlr3 gperf wget curl swig rsync
         sudo -E apt-get -qq autoremove --purge
         sudo -E apt-get -qq clean
         sudo timedatectl set-timezone "$TZ"
-        sudo mkdir -p /workdir
-        sudo chown $USER:$GROUPS /workdir
-
-#    - name: Clone source code
-#      env:
-#        REPO_URL: https://github.com/openwrt/openwrt
-#        REPO_BRANCH: master
-#      run: git clone --depth 1 $REPO_URL -b $REPO_BRANCH openwrt
-
-    - name: Initialize build
+    - name: Set the current date
+      id: date
       run: |
-        mkdir openwrt
-        chmod +x build.sh && cp build.sh ./openwrt && cd openwrt && ./build.sh
-        chmod +x newBuildroot.sh && ./newBuildroot.sh
-        useVersionInfo=$(git show -s --date=short --format="Author: %an<br/>Date: %cd<br/>Commit: %s")
-        cd master
-        echo "::set-env name=useVersionInfo::$useVersionInfo"
-        echo "::set-env name=DATE::$(TZ=UTC-8 date "+%Y%m%d")"
-        echo "::set-env name=RELEASE_DATE::$(TZ=UTC-8 date "+%Y-%m-%d")"
+        echo "date=$(date +'%Y.%m.%d-%H%M')" >> $GITHUB_ENV
+        echo "date2=$(date +'%m/%d %Y')" >> $GITHUB_ENV
+        echo "date3=$(date +'%m.%d')" >> $GITHUB_ENV
+        echo "date4=$(date +'%m.%d.%H')" >> $GITHUB_ENV
+        echo "DOCKERTAG=${{ secrets.DOCKER_ID }}/openwrt-6p:latest" >> $GITHUB_ENV
+        VERSION="$(echo "${{github.event.action}}" | grep -Eo " [0-9.]+" | sed -e 's/ //')" || true
+        [ "$VERSION" ] && echo "VERSION=$VERSION" >> $GITHUB_ENV || echo "VERSION=$(date +'%m.%d')" >> $GITHUB_ENV
+    - name: Clone source code
+      env: 
+        REPO_URL: https://github.com/ACwifidude/openwrt
+        REPO_BRANCH: openwrt-21.02-nss-qsdk11.0
 
-#     - name: Update & Install feeds
-#       working-directory: ./openwrt
-#       run: |
-#         ./scripts/feeds update -a
-#         ./scripts/feeds install -a
-        
-    - name: Load Custom Configuration
-      # working-directory: ./openwrt/master
       run: |
-        chmod +x $DIY_SH
-        cd ./openwrt/master
-        ../../$DIY_SH
-        make defconfig
-        
-    - name: SSH connection to Actions
-      uses: P3TERX/debugger-action@master
-      if: env.SSH_ACTIONS == 'true'
-
-    - name: Build firmware
-      working-directory: ./openwrt/master
-      id: compile
+        git clone --depth 1 $REPO_URL -b $REPO_BRANCH openwrt
+        cd openwrt
+        echo "src-git ssrp https://github.com/fw876/helloworld.git" >> ./feeds.conf.default
+    - name: Update feeds and Install feeds
+      working-directory: ./openwrt
       run: |
-        ./hnscripts/updateNmake.sh
-        echo "::set-output name=status::success"
-
-    - name: Clean Up
-      id: cleanup
-      if: steps.compile.outputs.status == 'success' && env.UPLOAD_BRANCH == 'true' && !cancelled()
-      run: |
-        cd ./openwrt/master/bin/targets/*/*
-        rm -rf *uImage
-        rm -rf *.manifest
-        rm -rf *.seed
-        rm -rf *.buildinfo
-        
-    - name: Upload Branch
-      if: steps.compile.outputs.status == 'success' && env.UPLOAD_BRANCH == 'true' && !cancelled() 
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+    - name: Load custom configuration
       env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        CONFIG_FILE: '.config'
       run: |
-          cd ./openwrt/master/bin
-          git init
-          git config user.name $GITHUB_USER_NAME
-          git config user.email $GITHUB_USER_EMAIL
-          git add .
-          git commit -m "Update OpenWrt_"$BRANCH
-          git push --force --quiet https://${{ secrets.GITHUB_TOKEN }}@$GITHUB HEAD:OpenWrt-$BRANCH
+        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
+        cp -f default-settings openwrt/package/emortal/default-settings/files/zzz-default-settings
+        chmod +x ./customize.sh && ./customize.sh
+        cd openwrt
+        cp -f .config .config && make defconfig
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+    - name: Download package
+      id: package
+      working-directory: ./openwrt
+      run: |
+        make download -j$(nproc)
+        find dl -size -1024c -exec ls -l {} \;
+        find dl -size -1024c -exec rm -f {} \;
+    - name: Set cache
+      uses: klever1988/cachewrtbuild@main
+      with:
+        ccache: 'true'
+        prefix: ${{ github.workspace }}/openwrt
 
-    - name: Organize Files
-      id: organize
-      if: steps.compile.outputs.status == 'success' && env.UPLOAD_FIRMWARE == 'true' && !cancelled()
+    - name: Compile the firmware
+      id: compile
+      working-directory: ./openwrt
       run: |
-        mv openwrt/master/.config openwrt/master/bin/targets/*/*
-        cd openwrt/master/bin/targets/*/*
-        rm -rf packages
-        rm -rf *uImage
-        rm -rf *.manifest
-        rm -rf *.seed
-        rm -rf *.buildinfo
-        echo "::set-env name=FIRMWARE::$PWD"
+        echo -e "$(($(nproc)+1)) thread compile"
+        make -j$(($(nproc)+1)) || make -j1 V=s
+        echo "::set-output name=status::success""
+        grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
+        [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
+        echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
+    - name: Check space usage
+      if: (!cancelled())
+      run: df -hT
+
+    - name: Upload bin directory
+      uses: actions/upload-artifact@main
+      if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
+      with:
+        name: OpenWrt_bin${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
+        path: openwrt/bin
+
+    - name: Organize files
+      id: organize
+      if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
+      run: |
+        cd openwrt/bin/targets/*/*
+        # rm -rf packages
+        echo "FIRMWARE=$PWD" >> $GITHUB_ENV
         echo "::set-output name=status::success"
 
-    - name: Upload Firmware Directory
+    - name: Upload firmware directory
       uses: actions/upload-artifact@main
       if: steps.organize.outputs.status == 'success' && !cancelled()
       with:
-        name: ${{ env.BUILD_USER }}-${{ env.DATE }}-OpenWrt-${{ env.BRANCH }}-Firmware
+        name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
         path: ${{ env.FIRMWARE }}
 
-    - name: Generate Tag
-      id: tag
-      if: steps.compile.outputs.status == 'success' && env.CREATE_RELEASE == 'true' && !cancelled()
+    - name: Upload firmware to cowtransfer
+      id: cowtransfer
+      if: steps.organize.outputs.status == 'success' && env.UPLOAD_COWTRANSFER == 'true' && !cancelled()
       run: |
-        echo ::set-env name=RELEASE_TAG::"$(TZ=UTC-8 date +"%Y-%m-%d")"
+        curl -fsSL git.io/file-transfer | sh
+        ./transfer cow --block 2621440 -s -p 64 --no-progress ${FIRMWARE} 2>&1 | tee cowtransfer.log
+        echo "::warning file=cowtransfer.com::$(cat cowtransfer.log | grep https)"
+        echo "::set-output name=url::$(cat cowtransfer.log | grep https | cut -f3 -d" ")"
+
+    - name: Upload firmware to WeTransfer
+      id: wetransfer
+      if: steps.organize.outputs.status == 'success' && env.UPLOAD_WETRANSFER == 'true' && !cancelled()
+      run: |
+        curl -fsSL git.io/file-transfer | sh
+        ./transfer wet -s -p 16 --no-progress ${FIRMWARE} 2>&1 | tee wetransfer.log
+        echo "::warning file=wetransfer.com::$(cat wetransfer.log | grep https)"
+        echo "::set-output name=url::$(cat wetransfer.log | grep https | cut -f3 -d" ")"
+
+    - name: Generate release tag
+      id: tag
+      if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+      run: |
+        echo "::set-output name=release_tag::$(date +"%Y.%m.%d-%H%M")"
+        touch release.txt
+        [ $UPLOAD_COWTRANSFER = true ] && echo "🔗 [Cowtransfer](${{ steps.cowtransfer.outputs.url }})" >> release.txt
+        [ $UPLOAD_WETRANSFER = true ] && echo "🔗 [WeTransfer](${{ steps.wetransfer.outputs.url }})" >> release.txt
         echo "::set-output name=status::success"
-    
-    - name: Upload Firmware To Release
+        
+    - name: Upload firmware to release
       uses: softprops/action-gh-release@v1
       if: steps.tag.outputs.status == 'success' && !cancelled()
       env:
-        GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        name: Netgear ${{ env.BRANCH }} 🚀 | Automatic compilation / ${{ env.RELEASE_TAG }}
-        tag_name: ${{ env.RELEASE_DATE }}
-        body: |            
-            1. This firmware is automatically compiled
-            2. Only complete firmware is provided in the release
-            3. If you need a separate IPK, please download from the branch
-            4. Source Code：${{ env.REPO_URL }}
-            -- Build by ${{ env.BUILD_USER }} @ with Github Action on ${{ env.RELEASE_DATE }}
-            🚀 Auto build           
-            ${{ env.useVersionInfo }}
-            ${{ github.event.commits[0].message }}
+        name: ${{ env.date2 }} ${{matrix.target}}
+        tag_name: ${{ steps.tag.outputs.release_tag }}
+        body_path: release.txt
         files: ${{ env.FIRMWARE }}/*
-        
-    - name : Upload artifact
-      #working-directory: ./openwrt
-      uses: actions/upload-artifact@master
+
+    - name: Delete workflow runs
+      uses: GitRML/delete-workflow-runs@main
       with:
-        name: OpenWrt
-        path: bin
+        retain_days: 1
+        keep_minimum_runs: 3
+
+    - name: Remove old Releases
+      uses: dev-drprasad/delete-older-releases@v0.1.0
+      if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+      with:
+        keep_latest: 3
+        delete_tags: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
