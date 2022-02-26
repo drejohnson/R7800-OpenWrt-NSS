@@ -77,7 +77,7 @@ jobs:
         cp -rf default-settings openwrt/package/default-settings
         chmod +x ./customize.sh && ./customize.sh
         cd openwrt
-        chmod +x ./packages.sh && ./packages.sh
+        chmod +x $GITHUB_WORKSPACE/packages.sh && $GITHUB_WORKSPACE/packages.sh
         cp -f .config .config && make defconfig
         make package/upx/{clean,compile} V=s
     - name: Download package
