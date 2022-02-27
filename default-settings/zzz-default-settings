@@ -5,7 +5,7 @@ uci set system.@system[0].timezone=CST-8
 uci set system.@system[0].zonename=Asia/Shanghai
 uci commit system
 
-uci set network.lan.ipaddr='10.0.0.1'
+uci set network.lan.ipaddr='192.168.10.1'
 uci set network.lan.netmask='255.255.255.0'
 uci set network.lan.delegate='0'
 uci set network.wan.delegate='0'
