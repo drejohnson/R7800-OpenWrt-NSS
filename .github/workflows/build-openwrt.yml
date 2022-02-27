@@ -65,12 +65,12 @@ jobs:
         # cd openwrt
         # echo "src-git ssrp https://github.com/fw876/helloworld.git" >> ./feeds.conf.default
         
-    - name: Apply Patches
-      run: |
-        mv add-upx.patch openwrt
-        cd openwrt
-        patch -p1 < add-upx.patch
-        ./scripts/feeds update -a
+#     - name: Apply Patches
+#       run: |
+#         mv add-upx.patch openwrt
+#         cd openwrt
+#         patch -p1 < add-upx.patch
+#         ./scripts/feeds update -a
         
     - name: Update feeds and Install feeds
       run:  |
