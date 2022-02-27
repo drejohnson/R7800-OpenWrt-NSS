@@ -80,21 +80,20 @@ jobs:
     - name: Load custom configuration
       env:
         CONFIG_FILE: '.config'
+        CUSTOMIZE_SH: 'customize.sh'
       run: |
+        [ -e default-settings ] && mv default-settings openwrt/package
+        [ -e files ] && mv files openwrt/files
         [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
-        cp -rf default-settings openwrt/package/default-settings
-        chmod +x ./customize.sh && ./customize.sh
-        chmod +x ./packages.sh && ./packages.sh
+        chmod +x $CUSTOMIZE_SH
         cd openwrt
-        # git clone --depth 1 https://github.com/xiaorouji/openwrt-passwall.git package/openwrt-passwall
-        git clone --depth 1 https://github.com/yichya/luci-app-xray package/luci-app-xray
-        git clone --depth 1 https://github.com/jerrykuku/luci-theme-argon.git package/luci-theme-argon
-        make defconfig
+        $GITHUB_WORKSPACE/$CUSTOMIZE_SH
         
     - name: Download package
       id: package
       working-directory: ./openwrt
       run: |
+        make defconfig
         make download -j$(nproc)
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
